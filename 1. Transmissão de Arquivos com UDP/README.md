@@ -8,7 +8,7 @@ Este projeto simula um sistema com execução de envio e recuperação de arquiv
 - Internamente, o programa apresenta uma interface para que o usuário selecione o arquivo que deseja transferir ou  encerre a execução dos processos. Quatro arquivos são disponibilizados no diretório `files` para testagem do programa, com extensões `.jpeg`, `.mp3`, `.pdf` e `.txt`.
 - Os programas devem ser mantidos paralelamente em execução e encerrados de maneira apropriada por meio da interface interna apresentada no código. 
 
-### Equipe
+## Equipe
 Bianca Duarte Silva (bds) \
 Caio Henrique Araújo Braga (chab) \
 Edson José Araújo Pereira Júnior (ejapj) \
