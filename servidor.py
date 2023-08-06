@@ -21,26 +21,22 @@ if not os.path.exists(endereco):
 extention, cliente = ServidorUdp.recvfrom(buffer_size)
 extentionFile= extention.decode()
 
-# extentionDecoded = extention.decode() # converte extensão p/ string
-
+# enquanto o cliente não pediu fim da conexão
 while extentionFile != "END" :
 
-    # print(str(extention))
-
+    # recebendo arquivo enviado pelo cliente
     with open(f"{endereco}/arquivoNovo.{extentionFile}", 'wb') as f: 
      while True:
         msg, cliente = ServidorUdp.recvfrom(buffer_size)
         if not msg:
             break
-        #print("arquivo teste:", msg.decode('utf-8'))  
         f.write(msg)
-        f.flush()   # passei 3 horas tmb por conta dessa desgraça
+        f.flush() 
     f.close()
 
-
+    # reenviando o arquivo para o cliente
     with open(f"{endereco}/arquivoNovo.{extentionFile}", 'rb') as file:
         dest = cliente  # Utilize o endereço do cliente para enviar a resposta
-    #extention = endereco.split('.')[-1].encode()
     
         ServidorUdp.sendto(extention, dest)
 
@@ -49,12 +45,11 @@ while extentionFile != "END" :
             ServidorUdp.sendto(l, dest)
             l = file.read(buffer_size)
         ServidorUdp.sendto(b'', dest)
-        print("terminei de enviar para o cliente")
+        print("Terminei de enviar para o cliente")
 
     file.close()
 
     extention, cliente = ServidorUdp.recvfrom(buffer_size)
     extentionFile= extention.decode()
-    # extentionDecoded = extention.decode()
-print("sai")
+print("Fim da conexão.")
 ServidorUdp.close()
