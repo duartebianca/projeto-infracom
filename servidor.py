@@ -19,25 +19,42 @@ if not os.path.exists(endereco):
     os.makedirs(endereco)
 
 extention, cliente = ServidorUdp.recvfrom(buffer_size)
-extentionDecoded = extention.decode('utf-8') # converte extensão p/ string
+extentionFile= extention.decode()
 
-with open(f"{endereco}/arquivoNovo.{extentionDecoded}", 'wb') as f: 
-    while True:
+# extentionDecoded = extention.decode() # converte extensão p/ string
+
+while extentionFile != "END" :
+
+    # print(str(extention))
+
+    with open(f"{endereco}/arquivoNovo.{extentionFile}", 'wb') as f: 
+     while True:
         msg, cliente = ServidorUdp.recvfrom(buffer_size)
         if not msg:
             break
         #print("arquivo teste:", msg.decode('utf-8'))  
         f.write(msg)
         f.flush()   # passei 3 horas tmb por conta dessa desgraça
+    f.close()
 
 
-with open(f"{endereco}/arquivoNovo.{extentionDecoded}", 'rb') as f:
-    dest = cliente  # Utilize o endereço do cliente para enviar a resposta
+    with open(f"{endereco}/arquivoNovo.{extentionFile}", 'rb') as file:
+        dest = cliente  # Utilize o endereço do cliente para enviar a resposta
     #extention = endereco.split('.')[-1].encode()
-    ServidorUdp.sendto(extention, dest)
-    l = f.read(buffer_size)
-    while l:
-        ServidorUdp.sendto(l, dest)
-        l = f.read(buffer_size)
+    
+        ServidorUdp.sendto(extention, dest)
 
-f.close()
+        l = file.read(buffer_size)
+        while l:
+            ServidorUdp.sendto(l, dest)
+            l = file.read(buffer_size)
+        ServidorUdp.sendto(b'', dest)
+        print("terminei de enviar para o cliente")
+
+    file.close()
+
+    extention, cliente = ServidorUdp.recvfrom(buffer_size)
+    extentionFile= extention.decode()
+    # extentionDecoded = extention.decode()
+print("sai")
+ServidorUdp.close()
