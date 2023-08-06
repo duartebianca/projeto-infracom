@@ -15,22 +15,24 @@ udp.bind(('localhost',3000))
 
 # função que pega o input do user e define o arquivo desejado
 def define_file():
-    print("Que tipo de arquivo deseja receber?\n")
-    print("(1) PDF\n(2)TXT\n(3) MP4\n(4) MP3\n(5) *IMG\n(6) Desejo encerrar conexao\n")
+
+    filesFolder = "./files/"
+
+    print("Escreva o nome do arquivo que quer receber:\n")
+    print("Opções disponíveis:")
+    print("- testePDF.pdf")
+    print("- testeTXT.txt")
+    print("- testeMP4.mp4")
+    print("- testeMP3.mp3")
+    print("- testeIMG.jpeg\n")
+    print("Ou finalize a conexão com")
+    print("- Finalizar\n")
     file_type = input()
     
-    if file_type == '1':  # Adicionei int() aqui para converter a entrada para inteiro
-        return "testePDF.pdf"
-    elif file_type == '2':
-        return "testeTXT.txt"
-    elif file_type == '3':
-        return "testeMP4.mp4"
-    elif file_type == '4':
-        return "testeMP3.ogg"
-    elif file_type == '5':
-        return "testeIMG.jpeg"
-    else:
+    if file_type == "Finalizar":
         return "END" 
+    else:
+        return filesFolder + file_type
 
 # função que termina a conexão udp
 def finish_conection():
@@ -46,7 +48,6 @@ def main():
     if not os.path.exists(enderecoChegada):
         os.makedirs(enderecoChegada)
 
-    # pegando input do user
     enderecoEnvio = define_file()
 
     while True:
@@ -65,18 +66,23 @@ def main():
                 udp.sendto(l, dest) # enviando para a porta referenciada
                 l = f.read(buffer_size) # ler os prox 1024 bytes do arq
             udp.sendto(b'', dest) # arquivo vazio para indicar fim
+
+            print("Arquivo " + enderecoEnvio + " enviado com sucesso.")
         f.close()
 
         # recebendo o arquivo que o servidor enviou
         extention, servidor = udp.recvfrom(buffer_size)
+        extention = extention.decode('utf-8')
 
-        with open(f"{enderecoChegada}/arquivoNovo.{extention.decode()}", 'wb') as file: 
+        with open(f"{enderecoChegada}/arquivoNovo.{extention}", 'wb') as file: 
             while True:
                 msg, servidor = udp.recvfrom(buffer_size)
                 if not msg:
                     break
                 file.write(msg)
                 file.flush()
+
+            print("Arquivo " + enderecoChegada + "enviado com sucesso.")
         file.close()
 
         enderecoEnvio = define_file()
