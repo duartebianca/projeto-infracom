@@ -22,7 +22,6 @@ def define_file():
     print("Opções disponíveis:")
     print("- testePDF.pdf")
     print("- testeTXT.txt")
-    print("- testeMP4.mp4")
     print("- testeMP3.mp3")
     print("- testeIMG.jpeg\n")
     print("Ou finalize a conexão com")
