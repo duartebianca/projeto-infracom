@@ -9,10 +9,9 @@ Este projeto simula um sistema com execução de envio e recuperação de arquiv
 - Os programas devem ser mantidos paralelamente em execução e encerrados de maneira apropriada por meio da interface interna apresentada no código. 
 
 ### Equipe
-
-- Bianca Duarte Silva (bds)
-- Caio Henrique Araújo Braga (chab)
-- Edson José Araújo Pereira Júnior (ejapj)
-- Kaylane Gonçalves Lira (kgl)
-- Rafael da Silva Barros (rsb7)
-- Yasmim Vitória Silva de Oliveira (yvso)
+Bianca Duarte Silva (bds) \
+Caio Henrique Araújo Braga (chab) \
+Edson José Araújo Pereira Júnior (ejapj) \
+Kaylane Gonçalves Lira (kgl) \
+Rafael da Silva Barros (rsb7) \
+Yasmim Vitória Silva de Oliveira (yvso)
