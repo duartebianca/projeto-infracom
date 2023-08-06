@@ -32,7 +32,6 @@ def define_file():
 def finish_conection():
     finish = "END"
     udp.sendto(finish.encode(),dest)
-    print("oi")
     udp.close()
 
 
@@ -51,6 +50,7 @@ def main():
 
         if enderecoEnvio == "END":
             finish_conection()
+            break
 
         # print(enderecoEnvio)
 
