@@ -19,7 +19,7 @@ def define_os():
     print("2 - Linux\n")
     so_type = input()
 
-    if so_type == 1:
+    if so_type == '1':
         filesFolder = ".\\files\\"
     else:
         filesFolder = "./files/"
