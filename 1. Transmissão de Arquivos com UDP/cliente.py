@@ -13,10 +13,21 @@ dest = (HOST, PORT)
 udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
 udp.bind(('localhost',3000))
 
-# função que pega o input do user e define o arquivo desejado
-def define_file():
+def define_os():
+    print("Qual sistema Operacional está utilizando?\n")
+    print("1 - Windows\n")
+    print("2 - Linux\n")
+    so_type = input()
 
-    filesFolder = "./files/"
+    if so_type == 1:
+        filesFolder = ".\\files\\"
+    else:
+        filesFolder = "./files/"
+
+    return filesFolder
+
+# função que pega o input do user e define o arquivo desejado
+def define_file(os_type):
 
     print("Escreva o nome do arquivo que quer receber:\n")
     print("Opções disponíveis:")
@@ -31,7 +42,7 @@ def define_file():
     if file_type == "Finalizar":
         return "END" 
     else:
-        return filesFolder + file_type
+        return os_type + file_type
 
 # função que termina a conexão udp
 def finish_conection():
@@ -47,7 +58,8 @@ def main():
     if not os.path.exists(enderecoChegada):
         os.makedirs(enderecoChegada)
 
-    enderecoEnvio = define_file()
+    os_type = define_os()
+    enderecoEnvio = define_file(os_type)
 
     while True:
 
@@ -84,7 +96,7 @@ def main():
             print("Arquivo " + enderecoChegada + "enviado com sucesso.")
         file.close()
 
-        enderecoEnvio = define_file()
+        enderecoEnvio = define_file(os_type)
         
 if __name__ == "__main__":
     main()  
