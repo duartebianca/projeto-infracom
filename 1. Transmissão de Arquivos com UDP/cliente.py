@@ -25,10 +25,7 @@ def define_file():
     print("- Finalizar\n")
     file_type = input()
     
-    if file_type == "Finalizar":
-        return "END" 
-    else:
-        return file_type
+    return file_type
 
 # função que termina a conexão udp
 def finish_conection():
@@ -45,17 +42,20 @@ def main():
         os.makedirs(enderecoChegada)
 
     # pegando caminho da pasta de arquivos
-    arquivo = define_file()
     pasta = "files"
     caminho_pasta = os.path.join(os.path.dirname(__file__), pasta)
 
-    enderecoEnvio = os.path.join(caminho_pasta, arquivo)
-
     while True:
+        print("entra")
+
+        arquivo = define_file()
+
         # fim da conexão
-        if arquivo == "END":
+        if arquivo == "Finalizar":
             finish_conection()
             break
+        
+        enderecoEnvio = os.path.join(caminho_pasta, arquivo)
 
         # enviando arquivo escolhido para o servidor
         with open(enderecoEnvio, 'rb') as f:
@@ -68,7 +68,6 @@ def main():
             udp.sendto(b'', dest) # arquivo vazio para indicar fim
 
             print("Arquivo " + enderecoEnvio + " enviado com sucesso.")
-        f.close()
 
         # recebendo o arquivo que o servidor enviou
         extention, servidor = udp.recvfrom(buffer_size)
@@ -82,10 +81,8 @@ def main():
                 file.write(msg)
                 file.flush()
 
-            print("Arquivo " + enderecoChegada + "enviado com sucesso.")
-        file.close()
+            print("Arquivo " + enderecoChegada + "enviado com sucesso.\n\n")
 
-        enderecoEnvio = os.path.join(caminho_pasta, define_file())
         
 if __name__ == "__main__":
     main()  
