@@ -15,6 +15,7 @@ udp.bind(('localhost',3000))
 
 # função que pega o input do user e define o arquivo desejado
 def define_file():
+    print("----------------------------------------------------------")
     print("Escreva o nome do arquivo que quer receber:\n")
     print("Opções disponíveis:")
     print("- testePDF.pdf")
@@ -46,7 +47,6 @@ def main():
     caminho_pasta = os.path.join(os.path.dirname(__file__), pasta)
 
     while True:
-        print("entra")
 
         arquivo = define_file()
 
@@ -56,6 +56,12 @@ def main():
             break
         
         enderecoEnvio = os.path.join(caminho_pasta, arquivo)
+
+        # Verifica se o arquivo existe
+        if not os.path.exists(enderecoEnvio):
+            print("----------------------------------------------------------")
+            print(f"Arquivo '{arquivo}' não encontrado. Tente novamente.\n")
+            continue
 
         # enviando arquivo escolhido para o servidor
         with open(enderecoEnvio, 'rb') as f:
@@ -81,7 +87,7 @@ def main():
                 file.write(msg)
                 file.flush()
 
-            print("Arquivo " + enderecoChegada + "enviado com sucesso.\n\n")
+            print("Arquivo " + enderecoChegada + "enviado com sucesso.\n")
 
         
 if __name__ == "__main__":
