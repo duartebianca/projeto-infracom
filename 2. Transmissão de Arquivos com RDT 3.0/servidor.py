@@ -41,6 +41,7 @@ def rcv_pkt():
     return str(msg[4:]) 
 
 def main():
+    print("Servidor esperando conexão")
     global rcv_base, next_seq
     # print('main')
     # criando diretório
@@ -60,7 +61,6 @@ def main():
     print('extentionFile:', extentionFile)
     # enquanto o cliente não pediu fim da conexão
     while extentionFile != "END" :
-
         # recebendo arquivo enviado pelo cliente
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'wb') as f:
 
@@ -78,7 +78,7 @@ def main():
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'rb') as file:
             dest = cliente  # Utilize o endereço do cliente para enviar a resposta
         
-            servidor_udp.sendto(extentionFile, dest) 
+            servidor_udp.sendto(extentionFile.encode(), dest) 
 
             l = file.read(BUFFER_SIZE)
             while l:
@@ -89,8 +89,7 @@ def main():
 
         file.close()
 
-        extention, cliente = servidor_udp.recvfrom(BUFFER_SIZE)
-        extentionFile= extention.decode()
+        extentionFile = rcv_pkt()
 
     print("Fim da conexão.")
     servidor_udp.close()
