@@ -15,9 +15,7 @@ udp.bind(('localhost',3000))
 
 # função que pega o input do user e define o arquivo desejado
 def define_file():
-
-    filesFolder = "./files/"
-
+    print("----------------------------------------------------------")
     print("Escreva o nome do arquivo que quer receber:\n")
     print("Opções disponíveis:")
     print("- testePDF.pdf")
@@ -28,10 +26,7 @@ def define_file():
     print("- Finalizar\n")
     file_type = input()
     
-    if file_type == "Finalizar":
-        return "END" 
-    else:
-        return filesFolder + file_type
+    return file_type
 
 # função que termina a conexão udp
 def finish_conection():
@@ -41,20 +36,32 @@ def finish_conection():
 
 
 def main(): 
-    # crianção da pasta no cliente
+    # criação da pasta no cliente
     enderecoChegada = './clienteFile'
 
     if not os.path.exists(enderecoChegada):
         os.makedirs(enderecoChegada)
 
-    enderecoEnvio = define_file()
+    # pegando caminho da pasta de arquivos
+    pasta = "files"
+    caminho_pasta = os.path.join(os.path.dirname(__file__), pasta)
 
     while True:
 
+        arquivo = define_file()
+
         # fim da conexão
-        if enderecoEnvio == "END":
+        if arquivo == "Finalizar":
             finish_conection()
             break
+        
+        enderecoEnvio = os.path.join(caminho_pasta, arquivo)
+
+        # Verifica se o arquivo existe
+        if not os.path.exists(enderecoEnvio):
+            print("----------------------------------------------------------")
+            print(f"Arquivo '{arquivo}' não encontrado. Tente novamente.\n")
+            continue
 
         # enviando arquivo escolhido para o servidor
         with open(enderecoEnvio, 'rb') as f:
@@ -67,7 +74,6 @@ def main():
             udp.sendto(b'', dest) # arquivo vazio para indicar fim
 
             print("Arquivo " + enderecoEnvio + " enviado com sucesso.")
-        f.close()
 
         # recebendo o arquivo que o servidor enviou
         extention, servidor = udp.recvfrom(buffer_size)
@@ -81,10 +87,8 @@ def main():
                 file.write(msg)
                 file.flush()
 
-            print("Arquivo " + enderecoChegada + "enviado com sucesso.")
-        file.close()
+            print("Arquivo " + enderecoChegada + "enviado com sucesso.\n")
 
-        enderecoEnvio = define_file()
         
 if __name__ == "__main__":
     main()  
