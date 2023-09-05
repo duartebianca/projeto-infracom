@@ -20,9 +20,7 @@ cliente_udp.bind((HOST ,3000))
 
 # função que pega o input do user e define o arquivo desejado
 def define_file():
-
-    filesFolder = ""
-
+    print("----------------------------------------------------------")
     print("Escreva o nome do arquivo que quer receber:\n")
     print("Opções disponíveis:")
     print("- testePDF.pdf")
@@ -33,10 +31,7 @@ def define_file():
     print("- Finalizar\n")
     file_type = input()
     
-    if file_type == "Finalizar":
-        return "END" 
-    else:
-        return filesFolder + file_type
+    return file_type
 
 # função que termina a conexão cliente_udp
 def finish_conection():
@@ -88,34 +83,44 @@ def main():
     if not os.path.exists(enderecoChegada):
         os.makedirs(enderecoChegada)
 
-    filename = define_file()
-    extensao = filename.split('.')[-1] # pegando extensão
+    # pegando caminho da pasta de arquivos
+    pasta = "files"
+    caminho_pasta = os.path.join(os.path.dirname(__file__), pasta)
+
+    arquivo = define_file()
+    extensao = arquivo.split('.')[-1] # pegando extensão
     # enviando o syn, recebendo synack
     sync() 
 
     while True:
 
         # fim da conexão
-        if filename == "END":
+        if arquivo == "Finalizar":
             finish_conection()
             break
 
+        enderecoEnvio = os.path.join(caminho_pasta, arquivo)
+
+        # Verifica se o arquivo existe
+        if not os.path.exists(enderecoEnvio):
+            print("----------------------------------------------------------")
+            print(f"Arquivo '{arquivo}' não encontrado. Tente novamente.\n")
+            continue
+
         # enviando arquivo escolhido para o servidor
-        with open(filename, 'rb') as f:
-            extensao = filename.split('.')[-1] # pegando extensão (txt, pdf..)
+        with open(enderecoEnvio, 'rb') as f:
+            extensao = enderecoEnvio.split('.')[-1] # pegando extensão (txt, pdf..)
             print('extensao:', extensao)
             snd_pkt(extensao)
 
             l = f.read(BUFFER_SIZE - 25) # lendo o primeiro pacotes de 1000 bytes
-            # print(l)
             while l:
                 snd_pkt(l.decode()) # enviando para a porta referenciada
                 l = f.read(BUFFER_SIZE - 25) # ler os prox 1000 bytes do arq
                 print(len(l), '<- len(l)')
             snd_pkt('') # arquivo vazio para indicar fim
 
-            print("Arquivo " + filename + " enviado com sucesso.")
-        f.close()
+            print("Arquivo " + arquivo + " enviado com sucesso.")
 
         # recebendo o arquivo que o servidor enviou
         extention, _ = cliente_udp.recvfrom(BUFFER_SIZE)
@@ -130,9 +135,8 @@ def main():
                 file.flush()
 
             print("Arquivo " + enderecoChegada + "enviado com sucesso.")
-        file.close()
 
-        filename = define_file()
+        arquivo = define_file()
         
 if __name__ == "__main__":
     main()  

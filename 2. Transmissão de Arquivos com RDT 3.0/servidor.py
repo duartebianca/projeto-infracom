@@ -19,6 +19,10 @@ servidor_udp.bind(orig)
 
 endereco = './servidorFile'
 
+# criando diretório
+if not os.path.exists(endereco):
+    os.makedirs(endereco)
+
 def incrementa(val):
     return 1 - val
 
@@ -51,7 +55,6 @@ def main():
     synack_next_seq_rcv_base = ('synack' + str(next_seq).zfill(2) + str(rcv_base).zfill(2)).encode()
     servidor_udp.sendto(synack_next_seq_rcv_base, cliente)
     next_seq = incrementa(next_seq)
-
 
     extentionFile = rcv_pkt()
     print('extentionFile:', extentionFile)
