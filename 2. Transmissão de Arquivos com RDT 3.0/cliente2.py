@@ -64,21 +64,32 @@ def incrementa(val):
 def snd_pkt(msg):
     global next_seq, rcv_base
     cliente_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
+    next_seq_antigo = next_seq
     next_seq = incrementa(next_seq) 
-    try:
-        rcv_msg, _ = cliente_udp.recvfrom(BUFFER_SIZE)
-    except socket.timeout:
-        print('reenvia pacote!')
-        rcv_msg, _ = cliente_udp.recvfrom(BUFFER_SIZE)
 
+    for i in range(3):
+        flag = 0
+        try:
+            print('Esperando ACK!')
+            rcv_msg, _ = cliente_udp.recvfrom(BUFFER_SIZE)    
+            flag = 1
+        except socket.timeout:
+            if i == 2: 
+                print('Falha no envio!')
+                break 
+            print('Reenvia pacote!')
+            cliente_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
+        if flag == 1:
+            break
     rcv_msg = rcv_msg.decode()
 
-    print(int(rcv_msg[:2]), rcv_base, '<- int(rcv_msg[:2]), rcv_base')
-    if int(rcv_msg[:2]) == rcv_base: # next_seq(seq), rcv_base(ack)
+    print('(ACK recebido)', int(rcv_msg[:2]), '==', rcv_base, 'rcv_base (client)')
+    if int(rcv_msg[:2]) == rcv_base: # next_seq (server) - seq = rcv_base (cliente) 
         rcv_base = incrementa(rcv_base) 
-        if snd_base == int(rcv_msg[2:4]):
-            print('ack recebido:', snd_base)
+        if int(rcv_msg[2:4]) == snd_base: # rcv_base (server) - ack = snd_base (cliente)
+            print('ACK correto recebido!')
 
+    # snd_base (ack recebido), next_seq (soma de tamanho enviado), rcv_base (soma de tamanho recebido)
 def main(): 
     global next_seq, rcv_base
     
@@ -90,6 +101,7 @@ def main():
 
     filename = define_file()
     extensao = filename.split('.')[-1] # pegando extensão
+
     # enviando o syn, recebendo synack
     sync() 
 
@@ -100,7 +112,6 @@ def main():
             finish_conection()
             break
 
-        # enviando arquivo escolhido para o servidor
         with open(filename, 'rb') as f:
             extensao = filename.split('.')[-1] # pegando extensão (txt, pdf..)
             print('extensao:', extensao)
