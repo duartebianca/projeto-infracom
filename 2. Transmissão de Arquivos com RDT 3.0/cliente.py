@@ -83,8 +83,24 @@ def snd_pkt(msg):
         rcv_base = incrementa(rcv_base) 
         if int(rcv_msg[2:4]) == snd_base: # rcv_base (server) - ack = snd_base (cliente)
             print('ACK correto recebido!')
-
     # snd_base (ack recebido), next_seq (soma de tamanho enviado), rcv_base (soma de tamanho recebido)
+
+
+def rcv_pkt():
+    global rcv_base, snd_base, next_seq
+    msg, cliente = cliente_udp.recvfrom(BUFFER_SIZE)
+    msg = msg.decode()
+    if int(msg[:2]) == rcv_base: 
+        rcv_base = incrementa(rcv_base)
+        # if snd_base == int(msg[2:4]):
+            # print('ack recebido!')
+    cliente_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2)).encode(), cliente)
+    
+    print(next_seq, rcv_base, '<- next_seq, rcv_base (cliente)')
+    next_seq = incrementa(next_seq)
+    print(msg[4:])
+    return str(msg[4:]) 
+
 def main(): 
     global next_seq, rcv_base
     
@@ -118,34 +134,33 @@ def main():
             print(f"Arquivo '{arquivo}' não encontrado. Tente novamente.\n")
             continue
 
+        extensao = enderecoEnvio.split('.')[-1] # pegando extensão (txt, pdf..)
         # enviando arquivo escolhido para o servidor
         with open(enderecoEnvio, 'rb') as f:
-            extensao = enderecoEnvio.split('.')[-1] # pegando extensão (txt, pdf..)
-            print('extensao:', extensao)
             snd_pkt(extensao)
 
             l = f.read(BUFFER_SIZE - 25) # lendo o primeiro pacotes de 1000 bytes
             while l:
                 snd_pkt(l.decode()) # enviando para a porta referenciada
                 l = f.read(BUFFER_SIZE - 25) # ler os prox 1000 bytes do arq
-                print(len(l), '<- len(l)')
+                # print(len(l), '<- len(l)')
             snd_pkt('') # arquivo vazio para indicar fim
-
             print("Arquivo " + arquivo + " enviado com sucesso.")
+        f.close()
 
         # recebendo o arquivo que o servidor enviou
-        extention, _ = cliente_udp.recvfrom(BUFFER_SIZE)
-        extention = extention.decode('utf-8') 
-        
-        with open(f"{enderecoChegada}/arquivoNovo.{extention}", 'wb') as file: 
+        extention = rcv_pkt()
+
+        with open(f"{enderecoChegada}/arquivoNovo.{extention}", 'wb') as f: 
             while True:
-                msg, servidor = cliente_udp.recvfrom(BUFFER_SIZE)
+                msg = rcv_pkt()
+                # msg = str(msg).replace("b'", "").replace("\\r\\n", "").replace("'", "")
                 if not msg:
                     break
-                file.write(msg)
-                file.flush()
-
-            print("Arquivo " + enderecoChegada + "enviado com sucesso.")
+                f.write(msg.encode())
+                f.flush()
+            f.close()
+        print("Arquivo " + enderecoChegada + "enviado com sucesso.")
 
         arquivo = define_file()
         

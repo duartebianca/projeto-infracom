@@ -26,11 +26,42 @@ if not os.path.exists(endereco):
 def incrementa(val):
     return 1 - val
 
+def snd_pkt(msg):
+    global next_seq, rcv_base, cliente
+    servidor_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
+    # print(len(msg))
+    next_seq_antigo = next_seq
+    next_seq = incrementa(next_seq) 
+
+    for i in range(3):
+        flag = 0
+        try:
+            print('Esperando ACK!')
+            rcv_msg, _ = servidor_udp.recvfrom(BUFFER_SIZE)    
+            flag = 1
+        except socket.timeout:
+            if i == 2: 
+                print('Falha no envio!')
+                break 
+            print('Reenvia pacote!')
+            servidor_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
+        if flag == 1:
+            break
+    rcv_msg = rcv_msg.decode()
+
+    # print('(ACK recebido)', int(rcv_msg[:2]), '==', rcv_base, 'rcv_base (server)')
+    if int(rcv_msg[:2]) == rcv_base: # next_seq (server) - seq = rcv_base (cliente) 
+        rcv_base = incrementa(rcv_base) 
+        if int(rcv_msg[2:4]) == snd_base: # rcv_base (server) - ack = snd_base (cliente)
+            print('ACK correto recebido!')
+
+    # snd_base (ack recebido), next_seq (soma de tamanho enviado), rcv_base (soma de tamanho recebido)
+
 def rcv_pkt():
-    global rcv_base, snd_base, next_seq
+    global rcv_base, snd_base, next_seq, cliente
     msg, cliente = servidor_udp.recvfrom(BUFFER_SIZE)
     msg = msg.decode()
-    if int(msg[:2]) == rcv_base:
+    if int(msg[:2]) == rcv_base: 
         rcv_base = incrementa(rcv_base)
         # if snd_base == int(msg[2:4]):
             # print('ack recebido!')
@@ -61,35 +92,32 @@ def main():
     # enquanto o cliente não pediu fim da conexão
     while extentionFile != "END" :
 
+
         # recebendo arquivo enviado pelo cliente
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'wb') as f:
-
             while True:
                 msg = rcv_pkt()
-                # print(len(msg))
-                # msg = msg.encode()
                 if not msg:
                     break
                 f.write(msg.encode())
                 f.flush() 
             f.close()
         print('arquivo recebido!')
-        # reenviando o arquivo para o cliente
-        with open(f"{endereco}/arquivoNovo.{extentionFile}", 'rb') as file:
-            dest = cliente  # Utilize o endereço do cliente para enviar a resposta
         
-            servidor_udp.sendto(extentionFile, dest) 
+        # reenviando o arquivo para o cliente
+        with open(f"{endereco}/arquivoNovo.{extentionFile}", 'r') as f:
+            snd_pkt(extentionFile)
 
-            l = file.read(BUFFER_SIZE)
+            l = f.read(BUFFER_SIZE - 25)
             while l:
-                servidor_udp.sendto(l, dest)
-                l = file.read(BUFFER_SIZE)
-            servidor_udp.sendto(b'', dest)
+                snd_pkt(l) 
+                l = f.read(BUFFER_SIZE - 25)
+            # print('send packet vazio')
+            snd_pkt('') # 
             print("Terminei de enviar para o cliente")
+        f.close()
 
-        file.close()
-
-        extention, cliente = servidor_udp.recvfrom(BUFFER_SIZE)
+        extention, cliente = servidor_udp.recvfrom(BUFFER_SIZE) # fazer fyn; fynack
         extentionFile= extention.decode()
 
     print("Fim da conexão.")
