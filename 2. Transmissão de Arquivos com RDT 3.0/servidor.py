@@ -72,6 +72,7 @@ def rcv_pkt():
     return str(msg[4:]) 
 
 def main():
+    print("Servidor esperando conexão")
     global rcv_base, next_seq
     # print('main')
     # criando diretório
@@ -92,7 +93,6 @@ def main():
     # enquanto o cliente não pediu fim da conexão
     while extentionFile != "END" :
 
-
         # recebendo arquivo enviado pelo cliente
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'wb') as f:
             while True:
@@ -105,10 +105,12 @@ def main():
         print('arquivo recebido!')
         
         # reenviando o arquivo para o cliente
-        with open(f"{endereco}/arquivoNovo.{extentionFile}", 'r') as f:
-            snd_pkt(extentionFile)
+        with open(f"{endereco}/arquivoNovo.{extentionFile}", 'rb') as file:
+            dest = cliente  # Utilize o endereço do cliente para enviar a resposta
+        
+            servidor_udp.sendto(extentionFile, dest) 
 
-            l = f.read(BUFFER_SIZE - 25)
+            l = file.read(BUFFER_SIZE)
             while l:
                 snd_pkt(l) 
                 l = f.read(BUFFER_SIZE - 25)
@@ -117,7 +119,9 @@ def main():
             print("Terminei de enviar para o cliente")
         f.close()
 
-        extention, cliente = servidor_udp.recvfrom(BUFFER_SIZE) # fazer fyn; fynack
+        file.close()
+
+        extention, cliente = servidor_udp.recvfrom(BUFFER_SIZE)
         extentionFile= extention.decode()
 
     print("Fim da conexão.")
