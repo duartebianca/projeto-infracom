@@ -1,5 +1,6 @@
 import socket
 import os
+import random
 from socket import socket as funcSocket
 
 # configurações da conexão
@@ -35,9 +36,22 @@ def define_file():
 
 # função que termina a conexão cliente_udp
 def finish_conection():
-    finish = "END"
-    cliente_udp.sendto(finish.encode(), server)
-    cliente_udp.close()
+    finish = "fyn"
+    snd_pkt(finish)
+    fynack = rcv_pkt()
+    if fynack == 'fynack':
+        cliente_udp.close()
+    else:
+        finish_conection
+
+def error_gen():
+    numero_aleatorio = random.random()
+    probabilidade_de_erro = 0.5
+    if numero_aleatorio < probabilidade_de_erro:
+        print('Erro na transmissão!')
+        return 1
+    else: 
+        return 0
 
 def sync():
     global next_seq, rcv_base
@@ -73,7 +87,9 @@ def snd_pkt(msg):
                 print('Falha no envio!')
                 break 
             print('Reenvia pacote!')
-            cliente_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
+            if error_gen() == 0:
+                print('pacote enviado!')
+                cliente_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
         if flag == 1:
             break
     rcv_msg = rcv_msg.decode()
@@ -84,7 +100,6 @@ def snd_pkt(msg):
         if int(rcv_msg[2:4]) == snd_base: # rcv_base (server) - ack = snd_base (cliente)
             print('ACK correto recebido!')
     # snd_base (ack recebido), next_seq (soma de tamanho enviado), rcv_base (soma de tamanho recebido)
-
 
 def rcv_pkt():
     global rcv_base, snd_base, next_seq
@@ -98,7 +113,7 @@ def rcv_pkt():
     
     print(next_seq, rcv_base, '<- next_seq, rcv_base (cliente)')
     next_seq = incrementa(next_seq)
-    print(msg[4:])
+    # print(msg[4:])
     return str(msg[4:]) 
 
 def main(): 
@@ -116,6 +131,8 @@ def main():
 
     arquivo = define_file()
     extensao = arquivo.split('.')[-1] # pegando extensão
+    print(extensao, 'extensao -')
+
     # enviando o syn, recebendo synack
     sync() 
 
@@ -135,7 +152,10 @@ def main():
             continue
 
         extensao = enderecoEnvio.split('.')[-1] # pegando extensão (txt, pdf..)
+        print(extensao, 'extensao --')
+
         # enviando arquivo escolhido para o servidor
+        # print(enderecoEnvio)
         with open(enderecoEnvio, 'rb') as f:
             snd_pkt(extensao)
 
@@ -154,13 +174,12 @@ def main():
         with open(f"{enderecoChegada}/arquivoNovo.{extention}", 'wb') as f: 
             while True:
                 msg = rcv_pkt()
-                # msg = str(msg).replace("b'", "").replace("\\r\\n", "").replace("'", "")
                 if not msg:
                     break
                 f.write(msg.encode())
                 f.flush()
             f.close()
-        print("Arquivo " + enderecoChegada + "enviado com sucesso.")
+        print(f"Arquivo {enderecoChegada}/arquivoNovo.{extention} recebido de volta!")
 
         arquivo = define_file()
         

@@ -1,5 +1,6 @@
 import socket
 import os
+import random
 from socket import socket as funcSocket
 
 # criando buffer, porta e host
@@ -26,6 +27,15 @@ if not os.path.exists(endereco):
 def incrementa(val):
     return 1 - val
 
+def error_gen():
+    numero_aleatorio = random.random()
+    probabilidade_de_erro = 0.5
+    if numero_aleatorio < probabilidade_de_erro:
+        print('Erro na transmissão!')
+        return 1
+    else: 
+        return 0
+
 def snd_pkt(msg):
     global next_seq, rcv_base, cliente
     servidor_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
@@ -41,10 +51,12 @@ def snd_pkt(msg):
             flag = 1
         except socket.timeout:
             if i == 2: 
-                print('Falha no envio!')
+                print('Não foi possivel enviar pacote!')
                 break 
             print('Reenvia pacote!')
-            servidor_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
+            if error_gen() == 0:
+                print('pacote enviado!')
+                servidor_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
         if flag == 1:
             break
     rcv_msg = rcv_msg.decode()
@@ -67,13 +79,12 @@ def rcv_pkt():
             # print('ack recebido!')
     servidor_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2)).encode(), cliente)
     
-    print(next_seq, rcv_base, '<- next_seq, rcv_base (server)')
+    # print(next_seq, rcv_base, '<- next_seq, rcv_base (server)')
     next_seq = incrementa(next_seq)
     return str(msg[4:]) 
 
 def main():
     global rcv_base, next_seq
-    # print('main')
     # criando diretório
     if not os.path.exists(endereco):
         os.makedirs(endereco)
@@ -86,14 +97,14 @@ def main():
     synack_next_seq_rcv_base = ('synack' + str(next_seq).zfill(2) + str(rcv_base).zfill(2)).encode()
     servidor_udp.sendto(synack_next_seq_rcv_base, cliente)
     next_seq = incrementa(next_seq)
+    print('Sincronizado! (synack enviado)')
 
     extentionFile = rcv_pkt()
-    print('extentionFile:', extentionFile)
+
     # enquanto o cliente não pediu fim da conexão
-    while extentionFile != "END" :
-
-
+    while extentionFile != "fyn" :
         # recebendo arquivo enviado pelo cliente
+        print(extentionFile, '<- extentionFile')
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'wb') as f:
             while True:
                 msg = rcv_pkt()
@@ -102,8 +113,8 @@ def main():
                 f.write(msg.encode())
                 f.flush() 
             f.close()
-        print('arquivo recebido!')
-        
+        print(f"Arquivo {endereco}/arquivoNovo.{extentionFile} recebido!")
+
         # reenviando o arquivo para o cliente
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'r') as f:
             snd_pkt(extentionFile)
@@ -114,13 +125,14 @@ def main():
                 l = f.read(BUFFER_SIZE - 25)
             # print('send packet vazio')
             snd_pkt('') # 
-            print("Terminei de enviar para o cliente")
+            print(f"Arquivo: {endereco}/arquivoNovo.{extentionFile} enviado de volta!")
         f.close()
 
-        extention, cliente = servidor_udp.recvfrom(BUFFER_SIZE) # fazer fyn; fynack
-        extentionFile= extention.decode()
+        extentionFile = rcv_pkt()  
+        print('Próxima mensagem: ', extentionFile)
+    snd_pkt('fynack')
+    print("Fim da conexão. (fynack)")
 
-    print("Fim da conexão.")
     servidor_udp.close()
 
 if __name__ == "__main__":
