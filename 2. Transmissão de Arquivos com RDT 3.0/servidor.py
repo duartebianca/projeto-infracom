@@ -13,6 +13,7 @@ orig = (HOST, PORT)
 next_seq = 0 # enviado
 snd_base = 0 # recebido
 rcv_base = 0 # recebido
+tentativas = 10
 
 # criando servidor udp
 servidor_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -38,20 +39,22 @@ def error_gen():
 
 def snd_pkt(msg):
     global next_seq, rcv_base, cliente
-    servidor_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
-    # print(len(msg))
+    if error_gen() == 0:
+        print('pacote enviado!')
+        servidor_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
     next_seq_antigo = next_seq
     next_seq = incrementa(next_seq) 
 
-    for i in range(3):
+    for i in range(tentativas):
         flag = 0
+        flag_erro = 0
         try:
             print('Esperando ACK!')
             rcv_msg, _ = servidor_udp.recvfrom(BUFFER_SIZE)    
             flag = 1
         except socket.timeout:
-            if i == 2: 
-                print('Não foi possivel enviar pacote!')
+            if i == tentativas - 1: 
+                flag_erro = 1
                 break 
             print('Reenvia pacote!')
             if error_gen() == 0:
@@ -59,6 +62,9 @@ def snd_pkt(msg):
                 servidor_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), cliente)
         if flag == 1:
             break
+    if flag_erro == 1:
+        print(f"Falha no envio! Não foi possivel enviar pacote {tentativas}x seguidas.")
+        return 1
     rcv_msg = rcv_msg.decode()
 
     # print('(ACK recebido)', int(rcv_msg[:2]), '==', rcv_base, 'rcv_base (server)')
@@ -104,7 +110,6 @@ def main():
     # enquanto o cliente não pediu fim da conexão
     while extentionFile != "fyn" :
         # recebendo arquivo enviado pelo cliente
-        print(extentionFile, '<- extentionFile')
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'wb') as f:
             while True:
                 msg = rcv_pkt()
@@ -116,6 +121,7 @@ def main():
         print(f"Arquivo {endereco}/arquivoNovo.{extentionFile} recebido!")
 
         # reenviando o arquivo para o cliente
+        servidor_udp.settimeout(2)
         with open(f"{endereco}/arquivoNovo.{extentionFile}", 'r') as f:
             snd_pkt(extentionFile)
 
@@ -123,10 +129,10 @@ def main():
             while l:
                 snd_pkt(l) 
                 l = f.read(BUFFER_SIZE - 25)
-            # print('send packet vazio')
-            snd_pkt('') # 
+            snd_pkt('')  
             print(f"Arquivo: {endereco}/arquivoNovo.{extentionFile} enviado de volta!")
         f.close()
+        servidor_udp.settimeout(None)
 
         extentionFile = rcv_pkt()  
         print('Próxima mensagem: ', extentionFile)

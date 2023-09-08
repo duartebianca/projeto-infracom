@@ -14,6 +14,7 @@ server = (HOST, PORT)
 next_seq = 0 # enviado
 snd_base = 0 # recebido
 rcv_base = 0 # recebido
+tentativas = 10
 
 # criando socket cliente_udp
 cliente_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -48,7 +49,6 @@ def error_gen():
     numero_aleatorio = random.random()
     probabilidade_de_erro = 0.5
     if numero_aleatorio < probabilidade_de_erro:
-        print('Erro na transmissão!')
         return 1
     else: 
         return 0
@@ -72,33 +72,37 @@ def incrementa(val):
 
 def snd_pkt(msg):
     global next_seq, rcv_base
-    cliente_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
+    if error_gen() == 0:
+        cliente_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
     next_seq_antigo = next_seq
     next_seq = incrementa(next_seq) 
 
-    for i in range(3):
+    for i in range(tentativas):
         flag = 0
+        flag_erro = 0
         try:
-            print('Esperando ACK!')
             rcv_msg, _ = cliente_udp.recvfrom(BUFFER_SIZE)    
             flag = 1
         except socket.timeout:
-            if i == 2: 
-                print('Falha no envio!')
+            if i == (tentativas - 1): 
+                flag_erro = 1
                 break 
-            print('Reenvia pacote!')
+            print('Erro no envio, reenvia pacote!')
             if error_gen() == 0:
-                print('pacote enviado!')
                 cliente_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
         if flag == 1:
             break
+    if flag_erro == 1:
+        print(f"Falha no envio! Não foi possivel enviar pacote {tentativas}x seguidas.")
+        return 1
     rcv_msg = rcv_msg.decode()
 
-    print('(ACK recebido)', int(rcv_msg[:2]), '==', rcv_base, 'rcv_base (client)')
+    # print('(ACK recebido)', int(rcv_msg[:2]), '==', rcv_base, 'rcv_base (client)')
     if int(rcv_msg[:2]) == rcv_base: # next_seq (server) - seq = rcv_base (cliente) 
         rcv_base = incrementa(rcv_base) 
-        if int(rcv_msg[2:4]) == snd_base: # rcv_base (server) - ack = snd_base (cliente)
-            print('ACK correto recebido!')
+        if int(rcv_msg[2:4]) == snd_base: 
+            print('Pacote enviado, ACK recebido!')
+    # rcv_base (server) - ack = snd_base (cliente)
     # snd_base (ack recebido), next_seq (soma de tamanho enviado), rcv_base (soma de tamanho recebido)
 
 def rcv_pkt():
@@ -107,11 +111,9 @@ def rcv_pkt():
     msg = msg.decode()
     if int(msg[:2]) == rcv_base: 
         rcv_base = incrementa(rcv_base)
-        # if snd_base == int(msg[2:4]):
-            # print('ack recebido!')
     cliente_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2)).encode(), cliente)
     
-    print(next_seq, rcv_base, '<- next_seq, rcv_base (cliente)')
+    # print(next_seq, rcv_base, '<- next_seq, rcv_base (cliente)')
     next_seq = incrementa(next_seq)
     # print(msg[4:])
     return str(msg[4:]) 
@@ -155,6 +157,7 @@ def main():
         print(extensao, 'extensao --')
 
         # enviando arquivo escolhido para o servidor
+        cliente_udp.settimeout(2)
         # print(enderecoEnvio)
         with open(enderecoEnvio, 'rb') as f:
             snd_pkt(extensao)
@@ -167,6 +170,8 @@ def main():
             snd_pkt('') # arquivo vazio para indicar fim
             print("Arquivo " + arquivo + " enviado com sucesso.")
         f.close()
+
+        cliente_udp.settimeout(None)
 
         # recebendo o arquivo que o servidor enviou
         extention = rcv_pkt()
