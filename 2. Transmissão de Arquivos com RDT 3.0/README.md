@@ -5,7 +5,7 @@ Este projeto simula um sistema com execução de envio e recuperação de arquiv
 ## Especificações do Projeto
 
 - O funcionamento do projeto exige que os programas `cliente.py` e `servidor.py` sejam executados em terminais separados. O usuário deve primeiro executar o programa servidor em um terminal, usando `python servidor.py`, e, em seguida, executar o programa cliente no outro terminal, usando `python cliente.py`.
-- Internamente, o programa apresenta uma interface para que o usuário selecione o arquivo para transferência ou  encerre a execução dos processos. Um arquivo `.txt` é disponibilizado para testagem do programa no diretório `files`.
+- Internamente, o programa apresenta uma interface para que o usuário selecione o arquivo para transferência ou  encerre a execução dos processos. Dois arquivos `.txt` são disponibilizados para testagem do programa no diretório `files`.
 -  Os programas devem ser mantidos paralelamente em execução e encerrados de maneira apropriada por meio da interface interna apresentada no código.
 
 ## Equipe
