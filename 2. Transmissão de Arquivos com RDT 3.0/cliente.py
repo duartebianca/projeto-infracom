@@ -2,6 +2,7 @@ import socket
 import os
 import random
 from socket import socket as funcSocket
+import time
 
 # configurações da conexão
 BUFFER_SIZE  = 1024
@@ -14,10 +15,12 @@ server = (HOST, PORT)
 next_seq = 0 # enviado
 snd_base = 0 # recebido
 rcv_base = 0 # recebido
-tentativas = 10
+tentativas = 3
+
 
 # criando socket cliente_udp
 cliente_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
+cliente_udp.settimeout(4) #setando tempo limite de execução do tempo
 cliente_udp.bind((HOST ,3000))
 
 # função que pega o input do user e define o arquivo desejado
@@ -25,10 +28,8 @@ def define_file():
     print("----------------------------------------------------------")
     print("Escreva o nome do arquivo que quer receber:\n")
     print("Opções disponíveis:")
-    print("- testePDF.pdf")
     print("- testeTXT.txt")
-    print("- testeMP3.mp3")
-    print("- testeIMG.jpeg\n")
+    print("- teste.txt")
     print("Ou finalize a conexão com")
     print("- Finalizar\n")
     file_type = input()
@@ -56,13 +57,16 @@ def error_gen():
 def sync():
     global next_seq, rcv_base
     syn_and_next_seq = ('syn' +  str(next_seq).zfill(2)).encode()
+    start_time = time.time()
     cliente_udp.sendto(syn_and_next_seq, server)
     print('syn enviado!')
     synack, _ = cliente_udp.recvfrom(BUFFER_SIZE)
     synack = synack.decode()
     if synack[:6] == 'synack':
         rcv_base = int(synack[6:9])
-        print('sincronizado! (syn, synack)')
+        end_time = time.time()
+        print(f'sincronizado! (syn, synack),{end_time - start_time} segundos')
+    
     print(rcv_base, 'rcv_base_sync')
     rcv_base = incrementa(rcv_base)
     print(rcv_base, 'rcv_base_sync')
@@ -72,26 +76,31 @@ def incrementa(val):
 
 def snd_pkt(msg):
     global next_seq, rcv_base
+    i = 0 #defindo contador de tentativa de envio
+    start_time = time.time()
     if error_gen() == 0:
         cliente_udp.sendto((str(next_seq).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
     next_seq_antigo = next_seq
     next_seq = incrementa(next_seq) 
 
-    for i in range(tentativas):
-        flag = 0
+    while True:
         flag_erro = 0
+        i+= 1
+
+        if(i == tentativas):
+           flag_erro = 1
+           break
+
         try:
-            rcv_msg, _ = cliente_udp.recvfrom(BUFFER_SIZE)    
-            flag = 1
-        except socket.timeout:
-            if i == (tentativas - 1): 
-                flag_erro = 1
-                break 
-            print('Erro no envio, reenvia pacote!')
-            if error_gen() == 0:
-                cliente_udp.sendto((str(next_seq_antigo).zfill(2) + str(rcv_base).zfill(2) + str(msg)).encode(), server)
-        if flag == 1:
+            rcv_msg, _ = cliente_udp.recvfrom(BUFFER_SIZE)
+            end_time = time.time()  
             break
+        except socket.timeout:
+            end_time = time.time()  
+            print(f"Tempo limite esgotado,{end_time-start_time} segundos")
+            print('Erro no envio, reenvia pacote!')
+            snd_pkt(msg)
+            
     if flag_erro == 1:
         print(f"Falha no envio! Não foi possivel enviar pacote {tentativas}x seguidas.")
         return 1
