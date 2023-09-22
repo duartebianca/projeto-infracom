@@ -1,0 +1,3 @@
+LISTA DE USERS PARA O CHAT
+fulano - localhost:3000
+sicrano - localhost:4000

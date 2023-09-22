@@ -7,16 +7,16 @@ import time
 
 # criando buffer, porta e host
 BUFFER_SIZE  = 1024
-HOST = 'localhost'
+HOST = '127.0.0.1'
 PORT = 5000
-orig = (HOST, 3000)
 
 # criando servidor udp
 servidor_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
 servidor_udp.bind((HOST, PORT))
 
 # timeout
-timeout = 3
+timeout = 0.5
+clients = [(HOST, 3000), (HOST, 4000)]
 
 def print_chat():
     os.system('cls')
@@ -38,27 +38,23 @@ def error_gen():
 def snd_pkt(sender, dest, msg): # remetente (quem envia); destinatario (HOST, PORT) - quem recebe o pacote; mensagem
     global timeout
     sender.settimeout(timeout)
+    
     if error_gen() == 0:
-        # print('mensagem enviada:', msg)
-        sender.sendto((msg).encode(), dest)
+        sender.sendto(msg.encode(), dest) 
+
     while True:
         try:
-            mensagemRecebida, _ = sender.recvfrom(BUFFER_SIZE)
+            mensagemRecebida, remetente = sender.recvfrom(BUFFER_SIZE)
             decode = mensagemRecebida.decode()
-            # print(decode, 'msg', ('ack' in decode))
-            if 'ack' in decode:
+            if 'ack' in decode and remetente == dest:
                 sender.settimeout(None)
-                # print('ack recebido para', decode, 'return')
                 return
         except socket.timeout:
-            # print('except')
             if error_gen() == 0:
-                # print('mensagem enviada:', msg)
-                sender.sendto((msg).encode(), dest)     
+                sender.sendto(msg.encode(), dest)
 
 def rcv_pkt_server(dest): # destinatario (HOST, PORT) - quem recebe o pacote
     dest.settimeout(None)
-    # print('None')
     while True:
         rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)
         dec_msg = rcv_msg.decode()
@@ -73,7 +69,8 @@ def main():
         sender, dec_msg = rcv_pkt_server(servidor_udp)
         print(sender, dec_msg, getTime())
         # função de mandar para todos os conectados
-        snd_pkt(servidor_udp, orig, 'mensagem aleatoria ' + str(int(random.random()*100)))
+        for client in clients:
+            snd_pkt(servidor_udp, client, 'mensagem aleatoria ' + str(int(random.random()*100)))
 
 if __name__ == "__main__":
     main()  

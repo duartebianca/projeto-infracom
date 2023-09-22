@@ -7,18 +7,32 @@ import time
 
 # criando buffer, porta e host
 BUFFER_SIZE  = 1024
-HOST = 'localhost'
+HOST = '127.0.0.1'
 PORT = 5000
 server = (HOST, PORT)
-
-# criando socket cliente_udp
-cliente_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
-cliente_udp.bind((HOST, 3000))
 
 # tempo do timeout
 timeout = 1
 
-# função que pega o input do user e define o arquivo desejado
+# criando socket cliente_udp
+cliente_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# login do usuário com username e setando a porta
+def login():
+    username = None
+    while username is None:
+        username = input("Digite seu nome de usuário: ")
+
+    if username == 'fulano':
+        cliente_udp.bind((HOST, 3000))
+    elif username == 'sicrano':
+        cliente_udp.bind((HOST, 4000))
+    else: 
+        print("Esse username não foi encontrado")
+
+    return username
+
+# função que pega o input do user
 def print_commands():
     os.system('cls') 
     print("-+>"*12, '\n')
@@ -33,6 +47,7 @@ def print_commands():
     print("help\n")
     print("<-+"*12, '\n')
 
+# função de geração de erro
 def error_gen():
     numero_aleatorio = random.random()
     probabilidade_de_erro = 0.5
@@ -79,6 +94,7 @@ def thread_rcv(dest, lock): # destinatario (HOST, PORT) - quem recebe o pacote;
         if rcv_msg is not None: 
             if rcv_msg == last_msg:
                 dest.sendto(('ack').encode(), sender)
+                rcv_msg = None
             elif 'ack' not in rcv_msg.decode():
                 print(rcv_msg.decode())
                 # print('ack enviado, para mensagem:', rcv_msg.decode())
@@ -93,9 +109,9 @@ def thread_input(sender, dest, lock):
         snd_pkt(sender, dest, msg, lock)    
 
 def main(): 
-
     cliente_udp.settimeout(timeout)
     lock = threading.Lock()
+    username = login()
     print_commands()
     thread1 = threading.Thread(target=thread_input, args=(cliente_udp, server, lock))
     thread2 = threading.Thread(target=thread_rcv, args=(cliente_udp, lock))
