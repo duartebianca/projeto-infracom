@@ -18,6 +18,7 @@ timeout = 1
 cliente_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # login do usuário com username e setando a porta
+# melhor fazer função que procura esses nomes em um arquivo
 def login():
     username = None
     while username is None:
@@ -29,6 +30,7 @@ def login():
         cliente_udp.bind((HOST, 4000))
     else: 
         print("Esse username não foi encontrado")
+        #testar quando digitar um nome que náo está na lista
 
     return username
 
@@ -58,6 +60,7 @@ def error_gen():
 
 def snd_pkt(sender, dest, msg, lock): # remetente (quem envia); destinatario (HOST, PORT) - quem recebe o pacote; mensagem
     global timeout
+       
     with lock:
         if error_gen() == 0:
             sender.sendto((msg).encode(), dest)
@@ -69,10 +72,9 @@ def snd_pkt(sender, dest, msg, lock): # remetente (quem envia); destinatario (HO
                     flag = 1
                 except socket.timeout:
                     if error_gen() == 0:
-                        sender.sendto((msg).encode(), dest)
-            dec_msg = rcv_msg.decode()
-            if dec_msg == 'ack':
-                # print('ack')
+                        sender.sendto((msg).encode(),dest)
+            dec_msg = rcv_msg.decode().split("#")[0]
+            if dec_msg == 'ack.': #aqui eh quando ele envia diretamente para o cliente endereçado
                 pass
             break
 
@@ -88,24 +90,31 @@ def thread_rcv(dest, lock): # destinatario (HOST, PORT) - quem recebe o pacote;
         with lock:
             count += 1
             try:
-                rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)                    
+                # aqui esta passando duas vezes quando se envia alguma mensagem para o chat
+                passou = 0
+                if(passou==0):
+                    rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)
+                    print(rcv_msg.decode().split("#")[0])  
+                    passou = 1          
             except socket.timeout:
                 pass
+        #não entendi
         if rcv_msg is not None: 
             if rcv_msg == last_msg:
+
                 dest.sendto(('ack').encode(), sender)
                 rcv_msg = None
             elif 'ack' not in rcv_msg.decode():
-                print(rcv_msg.decode())
                 # print('ack enviado, para mensagem:', rcv_msg.decode())
                 dest.sendto(('ack').encode(), sender)
                 last_msg = rcv_msg
             else: 
+                print("eh ack")
                 pass
 
 def thread_input(sender, dest, lock):
     while True:
-        msg = input()
+        msg = input() # mensagem é o user name?
         snd_pkt(sender, dest, msg, lock)    
 
 def main(): 
@@ -117,6 +126,7 @@ def main():
     thread2 = threading.Thread(target=thread_rcv, args=(cliente_udp, lock))
     thread2.start()
     thread1.start()
+   
 
 if __name__ == "__main__":
     main()  

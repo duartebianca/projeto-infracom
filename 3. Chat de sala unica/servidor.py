@@ -17,6 +17,7 @@ servidor_udp.bind((HOST, PORT))
 # timeout
 timeout = 0.5
 clients = [(HOST, 3000), (HOST, 4000)]
+clients_logado = []
 
 def print_chat():
     os.system('cls')
@@ -25,7 +26,7 @@ def print_chat():
     print("<-+"*12, '\n')
 
 def getTime():
-    return str(datetime.datetime.now().strftime('%X'))
+    return str(datetime.datetime.now().strftime('%d/%m/%Y %H:%M'))
 
 def error_gen():
     numero_aleatorio = random.random()
@@ -38,39 +39,75 @@ def error_gen():
 def snd_pkt(sender, dest, msg): # remetente (quem envia); destinatario (HOST, PORT) - quem recebe o pacote; mensagem
     global timeout
     sender.settimeout(timeout)
-    
-    if error_gen() == 0:
-        sender.sendto(msg.encode(), dest) 
+    sender.sendto(msg.encode(), dest) 
 
     while True:
         try:
             mensagemRecebida, remetente = sender.recvfrom(BUFFER_SIZE)
             decode = mensagemRecebida.decode()
-            if 'ack' in decode and remetente == dest:
+            # verifica se o ack foi do usuario que encaminhou
+            if 'ack' in decode and remetente == dest: 
                 sender.settimeout(None)
                 return
         except socket.timeout:
+            #caso contrario tenta reenviar
             if error_gen() == 0:
                 sender.sendto(msg.encode(), dest)
+
+def verifica_tipo(sender, msg):
+    
+    print("tipo", type(sender))
+    msg_rcv = msg.split()[0]
+  
+    if 'login_as' in msg_rcv:
+        usuario = msg.split()[1] #pegando o usuario
+        cliente = {"sender": sender, "usuario": str(usuario)}
+        clients_logado.append(cliente)
+        msg_final = f"{usuario} entrou na sala"
+    else:
+       # se for mensagem normal não teremos usuario. usuario será nulo
+       for cliente in clients_logado:
+         if cliente["sender"] == sender:
+            usuario = cliente["usuario"]
+            print(cliente)
+            break
+       #user_snd = [user for user in clients_logado if user["sender"] == sender]
+       #print(user_snd)
+      
+       msg_final = f"<{sender}>/~{usuario}:<{msg}><{getTime()}>"
+    
+    return sender, msg_final, usuario
+        
+
 
 def rcv_pkt_server(dest): # destinatario (HOST, PORT) - quem recebe o pacote
     dest.settimeout(None)
     while True:
         rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)
-        dec_msg = rcv_msg.decode()
-        if 'ack' not in dec_msg:
-            dest.sendto(('ack').encode(), sender)
-            return sender, dec_msg
         
+        rcv_msg = rcv_msg.decode()
 
+        print("rcv_pkt_server:", rcv_msg, sender)
+        
+        if 'ack' not in rcv_msg:  
+            print("enviando ack de recebimento..") 
+            dest.sendto(('ack#').encode(), sender)
+            result = verifica_tipo(sender, rcv_msg) #retorna o retorno de verofica tipo
+            return result
+        
+     
+## A minha ideia eh o cliente receber a mensagem do servidor, (usuario), serder
+## assim conseguimos separar o nome do usuario para cliente consultar
 def main():
     print_chat()
     while True:
-        sender, dec_msg = rcv_pkt_server(servidor_udp)
-        print(sender, dec_msg, getTime())
-        # função de mandar para todos os conectados
-        for client in clients:
-            snd_pkt(servidor_udp, client, 'mensagem aleatoria ' + str(int(random.random()*100)))
+        sender, dec_msg, user = rcv_pkt_server(servidor_udp)
+        
+        for client in clients_logado:
+               # snd_pkt(servidor_udp, client, 'mensagem aleatoria ' + str(int(random.random()*100)))
+            msg = f"{dec_msg}#{user}" # coloquei . para modularizar para que o usuario tenha acesso ao nome de quem enviou msg
+            snd_pkt(servidor_udp, client["sender"], msg)
+            print(sender, client)
 
 if __name__ == "__main__":
     main()  
