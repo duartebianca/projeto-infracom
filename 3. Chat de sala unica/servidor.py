@@ -4,6 +4,7 @@ import os
 from socket import socket as funcSocket
 import datetime
 import time
+import queue
 
 # criando buffer, porta e host
 BUFFER_SIZE  = 1024
@@ -22,6 +23,10 @@ servidor_udp.bind((HOST, PORT))
 # timeout
 timeout = 0.5
 clients_logado = []
+
+#definindo os parâmetros para o ban
+countBans = {} #contador de votos
+banTable = [] #lista de banidos
 
 def print_chat():
     os.system('cls')
@@ -109,17 +114,45 @@ def verifica_tipo(sender, msg):
         usuario = msg.split()[1] #pegando o usuario
 
         exist = verifica_user(sender, usuario)
+        if usuario not in banTable:
+            if exist == "invalido":
+                msg_final = f"Nome de Login <{usuario}> já existe#exced1124"
+                print(msg_final)
+            elif exist == "existe":
+                msg_final = f"Voce já esta logado#exced1124"
+            else:
+                print("a pessoa nao existe")
+                cliente = {"sender": sender, "usuario": str(usuario)}
+                clients_logado.append(cliente)
+                msg_final = f"{usuario} entrou na sala#exced112"
+    elif "ban_user" == msg_rcv: 
+        usuario = msg.split()[1] # pegando o usuario
 
-        if exist == "invalido":
-            msg_final = f"Nome de Login <{usuario}> já existe#exced1124"
-            print(msg_final)
-        elif exist == "existe":
-            msg_final = f"Voce já esta logado#exced1124"
+        exist = user_exist(usuario) # verifica se o usuario está logado
+
+        if exist == True:
+            msg_final = (f"Ban de <{usuario}> iniciado...#exced112")
+            meta = int(0.5 * len(clients_logado)) + len(clients_logado)%2 # Meta da contagem de ban
+            
+            if usuario not in banTable:
+                for client in clients_logado:
+                    client_user = client["usuario"]
+                    if client_user == usuario:
+                        if client_user not in countBans:
+                            countBans[client_user] = 1
+                            msg_final = str(client_user) + ' ban ' + str(countBans[client_user]) + '/' + str(meta) + '#exced112'
+                        else:
+                            (countBans[client_user]) = countBans[client_user] + 1
+                            msg_final = str(client_user) + ' ban ' + str(countBans[client_user]) + '/' + str(meta) + '#exced112'
+                            if countBans[client_user] >= meta:
+                                banTable.append(client_user)
+                                msg_banido = "Você foi banido!#exced112"
+                                snd_pkt(servidor_udp, client["sender"], msg_banido)
+                                clients_logado.remove(client)
+                                msg_final = (f"{client_user} foi banido da sala!#exced112")
         else:
-            print("a pessoa nao existe")
-            cliente = {"sender": sender, "usuario": str(usuario)}
-            clients_logado.append(cliente)
-            msg_final = f"{usuario} entrou na sala#exced112"
+            print("Nem tá na sala...")
+            msg_final = (f"{usuario} fora da sala#exced112")
     else:
        # se for mensagem normal não teremos usuario. usuario será nulo
        for cliente in clients_logado:

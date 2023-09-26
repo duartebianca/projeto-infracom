@@ -78,7 +78,7 @@ def snd_pkt(sender, dest, msg, lock):
                     flag = 1
                 except socket.timeout:
                     if error_gen() == 0:
-                        sender.sendto((msg).encode(),dest)
+                        sender.sendto((msg).encode(), dest)
             dec_msg = rcv_msg.decode().rsplit('#', 1)[0]
             if dec_msg == 'ack.': #aqui eh quando ele envia diretamente para o cliente endereçado
                 pass
@@ -97,11 +97,8 @@ def thread_rcv(dest, lock):
         with lock:
             count += 1
             try:
-                # aqui esta passando duas vezes quando se envia alguma mensagem para o chat
-                # ideia, botar mensagem antes do que recebeu antes
                 rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)
-                print(rcv_msg.decode().rsplit('#', 1)[0], dest)  
-                        
+                print(rcv_msg.decode().rsplit('#', 1)[0])        
             except socket.timeout:
                 pass
         if rcv_msg is not None: 
