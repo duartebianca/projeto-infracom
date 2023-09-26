@@ -138,6 +138,8 @@ def verifica_tipo(sender, msg):
                 cliente = {"sender": sender, "usuario": str(usuario)}
                 clients_logado.append(cliente)
                 msg_final = f"{usuario} entrou na sala#exced112"
+        else:
+            return sender, "", False
     elif "ban_user" == msg_rcv: 
         usuario = msg.split()[1] # pegando o usuario
 
@@ -234,11 +236,8 @@ def main():
                      snd_pkt(servidor_udp, client["sender"], msg_final)
         else:
             print("entrei aqui")
-            msg = "Fail. Log para acessar chat#"
+            msg = "Não foi possível acessar o chat.#"
             snd_pkt(servidor_udp, sender, msg)
-
-           
-                    
 
 if __name__ == "__main__":
     main()  
