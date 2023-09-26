@@ -17,24 +17,29 @@ timeout = 1
 # criando socket cliente_udp
 cliente_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# login do usuário com username e setando a porta
-# melhor fazer função que procura esses nomes em um arquivo
+# funcao que relaciona o login informado com a porta e faz o bind
+# utiliza o arquivo 'users.txt' para possiveis usuarios
 def login():
     username = None
     while username is None:
         username = input("Digite seu nome de usuário: ")
 
-    if username == 'fulano':
-        cliente_udp.bind((HOST, 3000))
-    elif username == 'sicrano':
-        cliente_udp.bind((HOST, 4000))
-    else: 
-        print("Esse username não foi encontrado")
-        #testar quando digitar um nome que náo está na lista
+    users = {}
+    with open("users.txt", "r") as file:
+        for line in file:
+            parts = line.strip().split(':')
+            # parte 2 do split eh a porta
+            if len(parts) == 2:
+                users[parts[0]] = int(parts[1])
 
-    return username
+    # fazendo o bind
+    if username in users:
+        porta = users[username]
+        cliente_udp.bind((HOST, porta))
+    else:
+        print("Username não encontrado")
 
-# função que pega o input do user
+# funcao que pega o input do user
 def print_commands():
     os.system('cls') 
     print("-+>"*12, '\n')
@@ -49,7 +54,7 @@ def print_commands():
     print("help\n")
     print("<-+"*12, '\n')
 
-# função de geração de erro
+# funcao de geracao de erro
 def error_gen():
     numero_aleatorio = random.random()
     probabilidade_de_erro = 0.5
@@ -58,7 +63,8 @@ def error_gen():
     else: 
         return 0
 
-def snd_pkt(sender, dest, msg, lock): # remetente (quem envia); destinatario (HOST, PORT) - quem recebe o pacote; mensagem
+# funcao de enviar pacotes (verificando se ha erro)
+def snd_pkt(sender, dest, msg, lock):
     global timeout
        
     with lock:
@@ -78,7 +84,8 @@ def snd_pkt(sender, dest, msg, lock): # remetente (quem envia); destinatario (HO
                 pass
             break
 
-def thread_rcv(dest, lock): # destinatario (HOST, PORT) - quem recebe o pacote;
+# funcao de recebimento de pacotes
+def thread_rcv(dest, lock):
     global timeout
     last_msg = None
     count = 0
@@ -97,30 +104,29 @@ def thread_rcv(dest, lock): # destinatario (HOST, PORT) - quem recebe o pacote;
                         
             except socket.timeout:
                 pass
-        #não entendi
         if rcv_msg is not None: 
             if rcv_msg == last_msg:
-
                 dest.sendto(('ack').encode(), sender)
                 rcv_msg = None
             elif 'ack' not in rcv_msg.decode():
-                # print('ack enviado, para mensagem:', rcv_msg.decode())
                 dest.sendto(('ack').encode(), sender)
                 last_msg = rcv_msg
             else: 
-                print("eh ack")
                 pass
 
+# funcao de input do cliente
 def thread_input(sender, dest, lock):
     while True:
-        msg = input() # mensagem é o user name?
+        msg = input() 
         snd_pkt(sender, dest, msg, lock)    
 
 def main(): 
     cliente_udp.settimeout(timeout)
     lock = threading.Lock()
-    username = login()
+    login()
     print_commands()
+
+    # threads de input e output do cliente
     thread1 = threading.Thread(target=thread_input, args=(cliente_udp, server, lock))
     thread2 = threading.Thread(target=thread_rcv, args=(cliente_udp, lock))
     thread2.start()

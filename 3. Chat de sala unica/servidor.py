@@ -32,6 +32,7 @@ def print_chat():
 def getTime():
     return str(datetime.datetime.now().strftime('%d/%m/%Y %H:%M'))
 
+# funcao de geracao de erro
 def error_gen():
     numero_aleatorio = random.random()
     probabilidade_de_erro = 0.5
@@ -40,10 +41,13 @@ def error_gen():
     else: 
         return 0
 
-def snd_pkt(sender, dest, msg): # remetente (quem envia); destinatario (HOST, PORT) - quem recebe o pacote; mensagem
+# funcao de envio de pacotes
+def snd_pkt(sender, dest, msg): 
     global timeout
     sender.settimeout(timeout)
-    sender.sendto(msg.encode(), dest) 
+
+    if error_gen() == 0:
+        sender.sendto(msg.encode(), dest) 
 
     while True:
         try:
@@ -123,14 +127,13 @@ def verifica_tipo(sender, msg):
             usuario = cliente["usuario"]
             print(cliente)
             break
-       #user_snd = [user for user in clients_logado if user["sender"] == sender]
-       #print(user_snd)
       
        msg_final = f"<{sender}>/~{usuario}:<{msg}><{getTime()}>#exced112"
     
     return sender, msg_final, usuario
         
-def rcv_pkt_server(dest): # destinatario (HOST, PORT) - quem recebe o pacote
+# funcao de recebimento do pacote
+def rcv_pkt_server(dest): 
     dest.settimeout(None)
     while True:
         rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)
@@ -140,9 +143,8 @@ def rcv_pkt_server(dest): # destinatario (HOST, PORT) - quem recebe o pacote
        #  print("rcv_pkt_server:", rcv_msg, sender)
         
         if 'ack' not in rcv_msg:  
-            print("enviando ack de recebimento..") 
             dest.sendto(('ack#').encode(), sender)
-            result = verifica_tipo(sender, rcv_msg) #retorna o retorno de verofica tipo
+            result = verifica_tipo(sender, rcv_msg)
             return result
         
      
