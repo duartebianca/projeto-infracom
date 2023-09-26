@@ -41,27 +41,6 @@ def error_gen():
     else: 
         return 0
 
-# funcao de envio de pacotes
-def snd_pkt(sender, dest, msg): 
-    global timeout
-    sender.settimeout(timeout)
-
-    if error_gen() == 0:
-        sender.sendto(msg.encode(), dest) 
-
-    while True:
-        try:
-            mensagemRecebida, remetente = sender.recvfrom(BUFFER_SIZE)
-            decode = mensagemRecebida.decode()
-            # verifica se o ack foi do usuario que encaminhou
-            if 'ack' in decode and remetente == dest: 
-                sender.settimeout(None)
-                return
-        except socket.timeout:
-            #caso contrario tenta reenviar
-            if error_gen() == 0:
-                sender.sendto(msg.encode(), dest)
-
 def serv_exist(sender):
 
     for cliente in clients_logado:
@@ -78,6 +57,40 @@ def user_exist(usuario):
             return True
         
     return False
+
+# funcao de envio de pacotes
+def snd_pkt(sender, dest, msg): 
+    global timeout
+    sender.settimeout(timeout)
+
+    print("#####")
+    print(msg.split()[0])
+
+    if error_gen() == 0:
+        if not serv_exist(dest) and msg.split()[0] == "login_as":
+          print("aqui tamb")
+        else:
+            sender.sendto(msg.encode(), dest) 
+
+    while True:
+        try:
+            mensagemRecebida, remetente = sender.recvfrom(BUFFER_SIZE)
+            decode = mensagemRecebida.decode()
+            # verifica se o ack foi do usuario que encaminhou
+            if 'ack' in decode and remetente == dest: 
+                sender.settimeout(None)
+                return
+        except socket.timeout:
+            #caso contrario tenta reenviar
+            if error_gen() == 0:
+                if not serv_exist(dest) and msg.split()[0] == "login_as":
+                    print("ENTREI AQUI")
+                    """usuario = msg.split()[1] #pegando o usuario
+                    exist = verifica_user(sender, usuario)"""
+
+                else:
+                    sender.sendto(msg.encode(), dest)
+
 
 def verifica_user(sender, usuario):
 
@@ -135,6 +148,7 @@ def verifica_tipo(sender, msg):
 # funcao de recebimento do pacote
 def rcv_pkt_server(dest): 
     dest.settimeout(None)
+    print("entrei em rcv pkt")
     while True:
         rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)
         
@@ -142,10 +156,18 @@ def rcv_pkt_server(dest):
 
        #  print("rcv_pkt_server:", rcv_msg, sender)
         
-        if 'ack' not in rcv_msg:  
-            dest.sendto(('ack#').encode(), sender)
-            result = verifica_tipo(sender, rcv_msg)
-            return result
+        if 'ack' not in rcv_msg: 
+            if serv_exist(sender): 
+                dest.sendto(('ack#').encode(), sender)
+                result = verifica_tipo(sender, rcv_msg)
+                return result
+            else:
+                if rcv_msg.split()[0] != "login_as":
+                    return sender, rcv_msg, False
+                else:
+                    print("entrei aqui aaaaaaaaaaa")
+                    result = verifica_tipo(sender, rcv_msg)
+                    return result
         
      
 ## A minha ideia eh o cliente receber a mensagem do servidor, (usuario), serder
@@ -158,24 +180,32 @@ def main():
     while True:
         sender, dec_msg, user = rcv_pkt_server(servidor_udp)
 
-        msg = dec_msg.rsplit('#', 1)[0]
-        msg_final = f"{msg}#{user}"
+        if user:
+
+            msg = dec_msg.rsplit('#', 1)[0]
+            msg_final = f"{msg}#{user}"
     
         
        
-        print("Na main do server", dec_msg.rsplit('#', 1)[1])
+            print("Na main do server", dec_msg.rsplit('#', 1)[1])
 
-        if(dec_msg.rsplit('#', 1)[1] == "exced1124"):
-            snd_pkt(servidor_udp, sender, msg_final)
+            if(dec_msg.rsplit('#', 1)[1] == "exced1124"):
+                 snd_pkt(servidor_udp, sender, msg_final)
+            else:
+                chat_clients = clients_logado
+                for client in chat_clients:
+                 # snd_pkt(servidor_udp, client, 'mensagem aleatoria ' + str(int(random.random()*100)))
+                # coloquei . para modularizar para que o usuario tenha acesso ao nome de quem enviou msg
+                     print("aqui")
+                     print(client)
+                     snd_pkt(servidor_udp, client["sender"], msg_final)
         else:
-            chat_clients = clients_logado
-            for client in chat_clients:
-               # snd_pkt(servidor_udp, client, 'mensagem aleatoria ' + str(int(random.random()*100)))
-             # coloquei . para modularizar para que o usuario tenha acesso ao nome de quem enviou msg
-                print("aqui")
-                print(client)
-                snd_pkt(servidor_udp, client["sender"], msg_final)
-            
+            print("entrei aqui")
+            msg = "Fail. Log para acessar chat#"
+            snd_pkt(servidor_udp, sender, msg)
+
+           
+                    
 
 if __name__ == "__main__":
     main()  
