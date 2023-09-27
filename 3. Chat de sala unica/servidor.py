@@ -214,17 +214,16 @@ def chat_list(sender):
     return client_user
 
 def verify_command(sender, msg):
-    msg_rcv = msg.split()[0]
   
-    if 'login_as' == msg_rcv:
-        usuario = msg.split()[1] #pegando o usuario
+    if msg.startswith('hi, meu nome eh '):
+        usuario = msg.split()[-1] # pegando o usuario
         info = login_as(sender, usuario)
         return info
-    elif "ban_user" == msg_rcv: 
-        usuario = msg.split()[1] # pegando o usuario
+    elif msg.startswith("ban"): 
+        usuario = msg.split()[-1] # pegando o usuario
         info = ban_user(sender, usuario)
         return sender, info
-    elif "disconnect" == msg_rcv:
+    elif msg.startswith("bye"):
         info = disconnect(sender)
         return info
     else:
@@ -255,7 +254,7 @@ def rcv_pkt_server(dest):
           sender, response_msg, usuario = manipulate_list(sender, rcv_msg)
           # Enviar a resposta de volta ao cliente
           snd_pkt(dest, sender, response_msg) 
-        elif rcv_msg == "chat_list":
+        elif rcv_msg == "list":
             chat_list(sender)      
         elif 'ack' not in rcv_msg: 
             if port_exist(sender): 
@@ -263,7 +262,7 @@ def rcv_pkt_server(dest):
                 result = verify_command(sender, rcv_msg)
                 return result
             else:
-                if rcv_msg.split()[0] != "login_as":
+                if not rcv_msg.startswith('hi, meu nome eh '):
                     return sender, rcv_msg, False
                 else:
                     result = verify_command(sender, rcv_msg)
