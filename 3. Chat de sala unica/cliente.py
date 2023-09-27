@@ -17,6 +17,9 @@ timeout = 1
 # criando socket cliente_udp
 cliente_udp = funcSocket(socket.AF_INET, socket.SOCK_DGRAM)
 
+#lista de amigos
+meus_amigos = []
+
 # funcao que relaciona o login informado com a porta e faz o bind
 # utiliza o arquivo 'users.txt' para possiveis usuarios
 def login():
@@ -114,8 +117,16 @@ def thread_rcv(dest, lock):
 # funcao de input do cliente
 def thread_input(sender, dest, lock):
     while True:
-        msg = input() 
-        snd_pkt(sender, dest, msg, lock)    
+        msg = input()
+        if msg == "mylist":
+          request_and_display_friends_list(sender, dest, lock)
+        else:
+            snd_pkt(sender, dest, msg, lock)   
+
+# Função para exibir a lista de amigos
+def request_and_display_friends_list(sender, server, lock):
+    request_msg = "mylist"  # Comando para solicitar a lista de amigos
+    snd_pkt(sender, server, request_msg, lock)
 
 def main(): 
     cliente_udp.settimeout(timeout)

@@ -1,2 +1,3 @@
-fulano:3000
-sicrano:4000
+fu:3000
+si:4000
+be:6000
