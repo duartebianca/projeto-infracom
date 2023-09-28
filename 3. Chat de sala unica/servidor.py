@@ -3,8 +3,7 @@ import random
 import os
 from socket import socket as funcSocket
 import datetime
-import time
-import queue
+from collections import defaultdict # :)
 
 # criando buffer, porta e host
 BUFFER_SIZE  = 1024
@@ -19,9 +18,12 @@ servidor_udp.bind((HOST, PORT))
 timeout = 0.5
 clients_logado = []
 
+
 #definindo os parâmetros para o ban
 countBans = {} #contador de votos
 banTable = [] #lista de banidos
+# voteTable = {}
+voteTable = defaultdict(list)
 
 #lista de amigos por usuário
 amigos_por_usuario = {}
@@ -156,36 +158,43 @@ def login_as(sender, usuario):
     return sender, msg_final, usuario
 
 # funcao de banir usuario
-def ban_user(usuario):
+def ban_user(usuario, sender):
     exist = username_exist(usuario)
 
-    if exist == True:
-        msg_final = (f"Ban de <{usuario}> iniciado...#exced112")
 
+    if exist == True:
         # Meta da contagem de ban
         meta = int(0.5 * len(clients_logado)) + len(clients_logado)%2 
         
-        if usuario not in banTable:
+        if usuario not in banTable and sender not in voteTable[usuario]:
+            print(voteTable)
             for client in clients_logado:
                 client_user = client["usuario"]
                 if client_user == usuario:
                     # primeiro voto para ser banido
                     if client_user not in countBans:
                         countBans[client_user] = 1
-                        msg_final = str(client_user) + ' ban ' + str(countBans[client_user]) + '/' + str(meta) + '#exced112'
+                        msg_final = f"[{client_user}] ban {str(countBans[client_user])}/{str(meta)}#exced112"
                     # nao eh o primeiro voto, apenas adicionando na contagem de votos
                     else:
                         (countBans[client_user]) = countBans[client_user] + 1
-                        msg_final = str(client_user) + ' ban ' + str(countBans[client_user]) + '/' + str(meta) + '#exced112'
-                        if countBans[client_user] >= meta:
-                            banTable.append(client_user)
-                            msg_banido = "Você foi banido!#exced112"
-                            snd_pkt(servidor_udp, client["sender"], msg_banido)
-                            clients_logado.remove(client)
-                            msg_final = (f"{client_user} foi banido da sala!#exced112")
+                        msg_final = f"[{client_user}] ban {str(countBans[client_user])}/{str(meta)}#exced112"
+
+                    voteTable[usuario].append(sender)
+
+                    if countBans[client_user] >= meta:
+                        banTable.append(client_user)
+                        msg_banido = "Você foi banido!#exced112"
+                        snd_pkt(servidor_udp, client["sender"], msg_banido)
+                        clients_logado.remove(client)
+                        msg_final = (f"{client_user} foi banido da sala!#exced112")
+            return msg_final
+        else:
+            msg = "Nao pode votar mais de uma vez"
+            return msg 
     else:
-        msg_final = (f"{usuario} fora da sala#exced112")
-    return msg_final, usuario
+        msg = "Nao eh possivel expulsar quem nao esta no chat.#exced112"
+        return msg 
 
 def disconnect(sender):
     for client in clients_logado:
@@ -221,8 +230,10 @@ def verify_command(sender, msg):
         return info
     elif msg.startswith("ban"): 
         usuario = msg.split()[-1] # pegando o usuario
-        info = ban_user(sender, usuario)
-        return sender, info
+        info = ban_user(usuario, sender)
+        if info.startswith("Nao eh") or info.startswith("Nao pode votar "):
+            return sender, info, None
+        return sender, info, usuario
     elif msg.startswith("bye"):
         info = disconnect(sender)
         return info
@@ -235,7 +246,6 @@ def verify_command(sender, msg):
        msg_final = f"<{sender}>/~{usuario}:<{msg}><{getTime()}>#exced112"
        return sender, msg_final, usuario
         
-# funcao de recebimento do pacote
 def rcv_pkt_server(dest): 
     dest.settimeout(None)
     while True:
@@ -244,15 +254,10 @@ def rcv_pkt_server(dest):
         rcv_msg = rcv_msg.decode()
         
         if rcv_msg == "mylist":
-          # Processar a solicitação 'mylist' e enviar a lista de amigos
           response_msg = process_mylist_request(sender)
-          print(response_msg)
-          # Enviar a resposta de volta ao cliente
           snd_pkt(dest, sender, response_msg)
         elif rcv_msg.startswith("addtomylist ") or rcv_msg.startswith("rmvfrommylist "):
-          #Processar a solicitação 'addtomylist' ou 'rmvfrommylist'
           sender, response_msg, usuario = manipulate_list(sender, rcv_msg)
-          # Enviar a resposta de volta ao cliente
           snd_pkt(dest, sender, response_msg) 
         elif rcv_msg == "list":
             chat_list(sender)      
@@ -260,6 +265,7 @@ def rcv_pkt_server(dest):
             if port_exist(sender): 
                 dest.sendto(('ack#').encode(), sender)
                 result = verify_command(sender, rcv_msg)
+                print(result)
                 return result
             else:
                 if not rcv_msg.startswith('hi, meu nome eh '):
@@ -272,8 +278,13 @@ def main():
 
     print_chat()
     while True:
+
+        amigo = False
         sender, dec_msg, user = rcv_pkt_server(servidor_udp)
-        if user:
+        print(user)
+        if user == None:
+            snd_pkt(servidor_udp, sender, dec_msg)
+        elif user:
             msg = dec_msg.rsplit('#', 1)[0]
             msg_final = f"{msg}#{user}"
 
@@ -281,26 +292,32 @@ def main():
                  snd_pkt(servidor_udp, sender, msg_final)
             else:
                 chat_clients = clients_logado
-                amigo = False
 
                 if dec_msg.startswith(f"<{sender}>"):
                     amigo = True
 
                 for client in chat_clients:
-                    if amigo and dec_msg.rsplit("#", 1)[1]== "exced112":
+ 
+                    if dec_msg.startswith(f"<{sender}>") and dec_msg.rsplit("#", 1)[1]== "exced112":
 
-                        print("aqui Dentroo2")
-                         
                         first = dec_msg.split("/")[0]
                         second = dec_msg.split("/")[1]
 
                         if client["sender"] in amigos_por_usuario:
-                             print("aqui")
-                             if user in amigos_por_usuario[client["sender"]]: 
+                            if sender != client["sender"] and user in amigos_por_usuario[client["sender"]]: 
                                 msg_final = first + "/" + "[Amigo]" + second
                                 amigo = False
                                 snd_pkt(servidor_udp, client["sender"], msg_final)
-
+                            else:
+                               if sender!=client["sender"]:
+                                snd_pkt(servidor_udp, client["sender"], msg_final)
+                               else:
+                                   pass
+                        else:
+                               if sender!=client["sender"]:
+                                snd_pkt(servidor_udp, client["sender"], msg_final)
+                               else:
+                                   pass
                     else:
                         snd_pkt(servidor_udp, client["sender"], msg_final)
         else:
