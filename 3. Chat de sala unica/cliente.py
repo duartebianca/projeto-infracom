@@ -81,8 +81,9 @@ def snd_pkt(sender, dest, msg, lock):
                 except socket.timeout:
                     if error_gen() == 0:
                         sender.sendto((msg).encode(), dest)
-            dec_msg = rcv_msg.decode().rsplit('#', 1)[0]
-            if dec_msg == 'ack.': #aqui eh quando ele envia diretamente para o cliente endereçado
+            #dec_msg = rcv_msg.decode().rsplit('#', 1)[0]
+            dec_msg = rcv_msg.decode()
+            if dec_msg == 'ack': #aqui eh quando ele envia diretamente para o cliente endereçado
                 pass
             break
 

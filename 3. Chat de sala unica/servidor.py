@@ -167,7 +167,6 @@ def ban_user(usuario, sender):
         meta = int(0.5 * len(clients_logado)) + len(clients_logado)%2 
         
         if usuario not in banTable and sender not in voteTable[usuario]:
-            print(voteTable)
             for client in clients_logado:
                 client_user = client["usuario"]
                 if client_user == usuario:
@@ -263,9 +262,8 @@ def rcv_pkt_server(dest):
             chat_list(sender)      
         elif 'ack' not in rcv_msg: 
             if port_exist(sender): 
-                dest.sendto(('ack#').encode(), sender)
+                dest.sendto(('ack').encode(), sender)
                 result = verify_command(sender, rcv_msg)
-                print(result)
                 return result
             else:
                 if not rcv_msg.startswith('hi, meu nome eh '):
@@ -279,23 +277,17 @@ def main():
     print_chat()
     while True:
 
-        amigo = False
         sender, dec_msg, user = rcv_pkt_server(servidor_udp)
-        print(user)
         if user == None:
             snd_pkt(servidor_udp, sender, dec_msg)
         elif user:
             msg = dec_msg.rsplit('#', 1)[0]
-            msg_final = f"{msg}#{user}"
+            # msg_final = f"{msg}#{user}"
 
             if(len(dec_msg.rsplit('#', 1)) == 2 and dec_msg.rsplit('#', 1)[1] == "exced1124"):
-                 snd_pkt(servidor_udp, sender, msg_final)
+                 snd_pkt(servidor_udp, sender, msg)
             else:
                 chat_clients = clients_logado
-
-                if dec_msg.startswith(f"<{sender}>"):
-                    amigo = True
-
                 for client in chat_clients:
  
                     if dec_msg.startswith(f"<{sender}>") and dec_msg.rsplit("#", 1)[1]== "exced112":
@@ -306,22 +298,21 @@ def main():
                         if client["sender"] in amigos_por_usuario:
                             if sender != client["sender"] and user in amigos_por_usuario[client["sender"]]: 
                                 msg_final = first + "/" + "[Amigo]" + second
-                                amigo = False
                                 snd_pkt(servidor_udp, client["sender"], msg_final)
                             else:
                                if sender!=client["sender"]:
-                                snd_pkt(servidor_udp, client["sender"], msg_final)
+                                snd_pkt(servidor_udp, client["sender"], msg)
                                else:
                                    pass
                         else:
                                if sender!=client["sender"]:
-                                snd_pkt(servidor_udp, client["sender"], msg_final)
+                                snd_pkt(servidor_udp, client["sender"], msg)
                                else:
                                    pass
                     else:
-                        snd_pkt(servidor_udp, client["sender"], msg_final)
+                        snd_pkt(servidor_udp, client["sender"], msg)
         else:
-            msg = "Não foi possível acessar o chat.#"
+            msg = "Não foi possível acessar o chat."
             snd_pkt(servidor_udp, sender, msg)
 
 if __name__ == "__main__":
