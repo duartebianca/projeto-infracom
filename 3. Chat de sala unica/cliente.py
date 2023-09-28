@@ -100,7 +100,8 @@ def thread_rcv(dest, lock):
         with lock:
             count += 1
             try:
-                rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)   
+                rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)  
+                print(rcv_msg.decode())  
             except socket.timeout:
                 pass
         if rcv_msg is not None: 
