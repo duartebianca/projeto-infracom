@@ -3,7 +3,7 @@ import random
 import os
 from socket import socket as funcSocket
 import datetime
-from collections import defaultdict # :)
+from collections import defaultdict
 
 # criando buffer, porta e host
 BUFFER_SIZE  = 1024
@@ -19,13 +19,12 @@ timeout = 0.5
 clients_logado = []
 
 
-#definindo os parâmetros para o ban
+# definindo os parâmetros para o ban
 countBans = {} #contador de votos
 banTable = [] #lista de banidos
-# voteTable = {}
 voteTable = defaultdict(list)
 
-#lista de amigos por usuário
+# lista de amigos por usuário
 amigos_por_usuario = {}
 
 def print_chat():
@@ -89,13 +88,14 @@ def verifica_user(sender, usuario):
     usuario_exist = username_exist(usuario)
     serder_exist = port_exist(sender)
   
-    if usuario_exist and not serder_exist:
+    if usuario_exist and not serder_exist: # usuario nao eh valido
         return "invalido"
-    elif not usuario_exist and serder_exist:
+    elif not usuario_exist and serder_exist: # tentativa de logar com nome diferente
         return  "existe"
     elif not usuario_exist and not serder_exist:
         return "add"
     else:
+        # tentativa de logar estando logado
         for cliente in clients_logado:
             sender_dado = cliente["sender"]
             user_dado = cliente["usuario"]
@@ -104,6 +104,7 @@ def verifica_user(sender, usuario):
             
         return "invalido"
 
+# funcao do estado da lista de amigos
 def process_mylist_request(sender):
     if sender in amigos_por_usuario:
         friends_list = amigos_por_usuario[sender]
@@ -115,6 +116,7 @@ def process_mylist_request(sender):
         response_msg = "Sua lista de amigos está vazia."
     return response_msg
 
+# adicao e remocao na lista de amigos
 def manipulate_list(sender, msg):
     msg_rcv = msg.split()[0]
     if msg_rcv == 'addtomylist':
@@ -149,6 +151,7 @@ def login_as(sender, usuario):
         elif exist == "existe": # logando quando ja esta logado
             msg_final = f"Voce já esta logado#exced1124"
         else:
+            # logando
             cliente = {"sender": sender, "usuario": str(usuario)}
             clients_logado.append(cliente)
             msg_final = f"{usuario} entrou na sala#exced112"
@@ -183,8 +186,10 @@ def ban_user(usuario, sender):
 
                     if countBans[client_user] >= meta:
                         banTable.append(client_user)
+                        # enviando mensagem para usuario banido
                         msg_banido = "Você foi banido!#exced112"
                         snd_pkt(servidor_udp, client["sender"], msg_banido)
+                        # enviando mensagem para os outros que estão logados
                         clients_logado.remove(client)
                         msg_final = (f"{client_user} foi banido da sala!#exced112")
             return msg_final
@@ -195,6 +200,7 @@ def ban_user(usuario, sender):
         msg = "Nao eh possivel expulsar quem nao esta no chat.#exced112"
         return msg 
 
+# funcao de sair do chat
 def disconnect(sender):
     for client in clients_logado:
         client_sender = client["sender"]
@@ -208,6 +214,7 @@ def disconnect(sender):
             msg_final = f"{client_user} saiu do chat!#exced112"
     return client_sender, msg_final, client_user
 
+# funcao de apresentar a lista de usuarios logados
 def chat_list(sender):
     msg_final = "\nLista de usuarios:\n"
 
@@ -221,18 +228,25 @@ def chat_list(sender):
     snd_pkt(servidor_udp, sender, msg_final)
     return client_user
 
+# verifica mensagem enviada pelo cliente e como sera tratada
 def verify_command(sender, msg):
   
+    # hi, meu nome eh <nome_usuario>
     if msg.startswith('hi, meu nome eh '):
         usuario = msg.split()[-1] # pegando o usuario
         info = login_as(sender, usuario)
         return info
+    # ban <nome_usuario>
     elif msg.startswith("ban"): 
         usuario = msg.split()[-1] # pegando o usuario
         info = ban_user(usuario, sender)
-        if info.startswith("Nao eh") or info.startswith("Nao pode votar "):
+
+        # envia a mensagem apenas para o usuario que solicitou o comando
+        if info.startswith("Nao eh possivel expulsar") or info.startswith("Nao pode votar "):
             return sender, info, None
+
         return sender, info, usuario
+    # bye    
     elif msg.startswith("bye"):
         info = disconnect(sender)
         return info
@@ -244,7 +258,8 @@ def verify_command(sender, msg):
       
        msg_final = f"<{sender}>/~{usuario}:<{msg}><{getTime()}>#exced112"
        return sender, msg_final, usuario
-        
+
+# recebimento de pacotes       
 def rcv_pkt_server(dest): 
     dest.settimeout(None)
     while True:
@@ -266,6 +281,7 @@ def rcv_pkt_server(dest):
                 result = verify_command(sender, rcv_msg)
                 return result
             else:
+                # manda mensagem sem logar antes
                 if not rcv_msg.startswith('hi, meu nome eh '):
                     return sender, rcv_msg, False
                 else:
