@@ -100,7 +100,7 @@ def thread_rcv(dest, lock):
         with lock:
             count += 1
             try:
-                rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)   
+                rcv_msg, sender = dest.recvfrom(BUFFER_SIZE)  
             except socket.timeout:
                 pass
         if rcv_msg is not None: 
@@ -109,6 +109,7 @@ def thread_rcv(dest, lock):
                 rcv_msg = None
             elif 'ack' not in rcv_msg.decode():
                 dest.sendto(('ack').encode(), sender)
+                print(rcv_msg.decode()) 
                 last_msg = rcv_msg
             else: 
                 pass

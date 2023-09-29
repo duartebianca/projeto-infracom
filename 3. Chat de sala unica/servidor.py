@@ -187,7 +187,7 @@ def ban_user(usuario, sender):
                     if countBans[client_user] >= meta:
                         banTable.append(client_user)
                         # enviando mensagem para usuario banido
-                        msg_banido = "Você foi banido!#exced112"
+                        msg_banido = "Você foi banido!"
                         snd_pkt(servidor_udp, client["sender"], msg_banido)
                         # enviando mensagem para os outros que estão logados
                         clients_logado.remove(client)
@@ -208,7 +208,7 @@ def disconnect(sender):
         if client_sender == sender:
             clients_logado.remove(client)
             # mensagem para quem saiu
-            msg_client = "Você saiu do chat!#exced112"
+            msg_client = "Você saiu do chat!"
             snd_pkt(servidor_udp, client_sender, msg_client)
             # mensagem para os outros
             msg_final = f"{client_user} saiu do chat!#exced112"
@@ -281,7 +281,6 @@ def rcv_pkt_server(dest):
                 result = verify_command(sender, rcv_msg)
                 return result
             else:
-                # manda mensagem sem logar antes
                 if not rcv_msg.startswith('hi, meu nome eh '):
                     return sender, rcv_msg, False
                 else:
@@ -294,18 +293,19 @@ def main():
     while True:
 
         sender, dec_msg, user = rcv_pkt_server(servidor_udp)
+
         if user == None:
             snd_pkt(servidor_udp, sender, dec_msg)
         elif user:
             msg = dec_msg.rsplit('#', 1)[0]
-            # msg_final = f"{msg}#{user}"
+      
 
             if(len(dec_msg.rsplit('#', 1)) == 2 and dec_msg.rsplit('#', 1)[1] == "exced1124"):
                  snd_pkt(servidor_udp, sender, msg)
             else:
                 chat_clients = clients_logado
                 for client in chat_clients:
- 
+         
                     if dec_msg.startswith(f"<{sender}>") and dec_msg.rsplit("#", 1)[1]== "exced112":
 
                         first = dec_msg.split("/")[0]
